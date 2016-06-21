@@ -2,10 +2,10 @@
 % Please edit documentation in R/med_reg.R
 \name{med_reg}
 \alias{med_reg}
-\title{med_reg
-Gives controlled direct effect, natural indirect effect, natural direct effect}
+\title{med_reg}
 \usage{
-med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE)
+med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE,
+  ref = 0, treat = 1)
 }
 \arguments{
 \item{df}{Data frame}
@@ -23,9 +23,12 @@ med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE)
 \item{mlvl}{vector of values at which to compute a controlled direct effect}
 
 \item{delta}{whether the delta method should be used to get confidence intervals}
+
+\item{ref}{referent level of exposure, 0 by default}
+
+\item{treat}{treatment level of exposure, 1 by default}
 }
 \description{
-med_reg
 Gives controlled direct effect, natural indirect effect, natural direct effect
 }
 
