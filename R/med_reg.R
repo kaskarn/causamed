@@ -1,5 +1,4 @@
 #' med_reg
-#'
 #' Gives controlled direct effect, natural indirect effect, natural direct effect
 #'
 #' @param df Data frame
@@ -10,7 +9,6 @@
 #' @param noint supress exposure-mediator interaction term
 #' @param mlvl vector of values at which to compute a controlled direct effect
 #' @param delta whether the delta method should be used to get confidence intervals
-#'
 #' @export
 med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE){
 # Twoway decomposition indirect and direct effects  (VDW)
