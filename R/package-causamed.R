@@ -3,7 +3,7 @@
 #' @docType package
 #' @name causamed
 #'
-#' @importFrom dplyr mutate
+#' @import dplyr
 #' @importFrom nnet multinom
 #' @import magrittr
 NULL

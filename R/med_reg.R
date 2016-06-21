@@ -1,4 +1,5 @@
 #' med_reg
+#'
 #' Gives controlled direct effect, natural indirect effect, natural direct effect
 #'
 #' @param df Data frame
@@ -9,16 +10,17 @@
 #' @param noint supress exposure-mediator interaction term
 #' @param mlvl vector of values at which to compute a controlled direct effect
 #' @param delta whether the delta method should be used to get confidence intervals
+#' @param ref referent level of exposure, 0 by default
+#' @param treat treatment level of exposure, 1 by default
 #' @export
-med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE){
+med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE, ref = 0, treat = 1){
 # Twoway decomposition indirect and direct effects  (VDW)
 # for continuous mediator and outcome
-
 
 # Sets position and lengths of coefficient vectors
   if(is.factor(df[[X]])) xlen <- levels(df[[X]]) %>% length - 1 else xlen <- 1
   if(is.factor(df[[M]])) mlen <- levels(df[[M]]) %>% length - 1 else mlen <- 1
-  c_mu <- lapply(C, function (i) if(is.factor(df[[i]])) table(df[[i]])[-1]/nrow(df) else mean(df[[i]])) %>% unlist
+  c_mu <- lapply(C, function (i) if(is.factor(df[[i]])) table(df[[i]])[-1]/nrow(df) else mean(df[[i]], na.rm = TRUE)) %>% unlist
 
 #  throws error if needed
   if((xlen > 1 | mlen > 1) & delta == TRUE) stop("Standard error must be estimated by bootstrapping for polytomous treatment or mediator")
@@ -52,7 +54,8 @@ med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FAL
   if (!is.null(mlvl)) out <- list(out, cde = do.call(rbind, lapply(mlvl, function (i) ((t1 + t4*i)*(treat - ref)) )) )
 
   #Delta method
-  if(delta == TRUE){
+  if(delta == FALSE){ return(out)
+  }else{
     sigma <- cbind(
       rbind(vcov(m1), matrix(0, length(m2$coefficients), length(m1$coefficients))),
       rbind(vcov(m2), matrix(0, length(m1$coefficients), length(m2$coefficients)))
