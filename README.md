@@ -3,7 +3,7 @@ Implementation of Tyler Vanderweele's methods for mediation
 
 ####Everything pulled straight from the book "Explanation in Causal Inference; Methods for mediation and interaction" by Tyler Vanderweele (2015)
 
-Currently implements
+Currently implements <br>
 1. Regression methods for continuous mediator/outcome (section 3.1.1) <br>
 2. IPTW-based method for scenario with exposure-induced M->Y confounding (section 5.3.1) <br>
 3. G-estimation based method for joint effect of multiple mediators (section 5.3.3) <br>
