@@ -17,6 +17,6 @@ To do (not much work) <br>
 9. Fix (?) random interventional analogue for categorical exposure case <br> <br>
 
 To do (lots of work) <br> 
-9. Implementation of sensitivity analyses for regression-based methods <br>
-10. More sensitivity analyses in settings where NDE/NIE not identified <br>
-11. Handle non-parametric/semi-parametric approachs to propensity score estimation for weighting-based approaches <br>
+10. Implementation of sensitivity analyses for regression-based methods <br>
+11. More sensitivity analyses in settings where NDE/NIE not identified <br>
+12. Handle non-parametric/semi-parametric approachs to propensity score estimation for weighting-based approaches <br>
