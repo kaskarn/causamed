@@ -1,12 +1,11 @@
-#' med_reg
-#'
-#' Gives controlled direct effect, natural indirect effect, natural direct effect
+#' \code{med_reg} Gives controlled direct effect, natural indirect effect, natural direct effect using regression-based formulas
+#' affording the best statistical power
 #'
 #' @param df Data frame
-#' @param X exposure
-#' @param M mediator
-#' @param Y outcome
-#' @param C confounders of exposure-outcome or mediator-outcome association
+#' @param X exposure, can be continuous or categorical
+#' @param M mediator, must be continuous for the moment
+#' @param Y outcome, must be continuous for the moment
+#' @param C confounders of exposure-outcome or mediator-outcome association. Can take any form
 #' @param noint supress exposure-mediator interaction term
 #' @param mlvl vector of values at which to compute a controlled direct effect
 #' @param delta whether the delta method should be used to get confidence intervals

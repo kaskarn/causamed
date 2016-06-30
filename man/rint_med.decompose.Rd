@@ -2,25 +2,12 @@
 % Please edit documentation in R/med_rint.R
 \name{rint_med.decompose}
 \alias{rint_med.decompose}
-\title{rint_med.decompose: Random interventional analogue effects}
+\title{rint_med.decomposes}
 \usage{
-rint_med.decompose(dat, Y, X, astar = "astar")
-}
-\arguments{
-\item{Y}{vector of text strings containing the name of the outcome variable}
-
-\item{X}{Text string containing the name of the exposure variable}
-
-\item{astar}{optional alternative name for (pseudo) randomized treatment a*}
-
-\item{orig_dat}{The original dataset}
+rint_med.decompose(dat, Y, A, astar = "astar")
 }
 \description{
-Computes NDEr, NIEr and TEr, the random interventional
-analogues of the natural direct effect, natural indirect effect and total effect,
-in the presence of exposure-induced confounding of M -> Y
-}
-\details{
-to do: extend to multiple confounders
+part of the functio calculating CDE(M) at different values or distributions of M, and computes weights used in
+master function
 }
 

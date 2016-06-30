@@ -1,6 +1,4 @@
-#' med_iptw
-#'
-#' Computes CDE(M) for a given mediator level, in a setting with an exposure-induced confounder of
+#' \code{med_iptw} Computes CDE(M) for a given mediator level, in a setting with an exposure-induced confounder of
 #' the mediator-outcome association
 #'
 #' @param orig_dat The original dataset
@@ -8,10 +6,57 @@
 #' @param M Text string containing the name of the mediator variable
 #' @param C vector of text strings containing the name or expression of confounder variables
 #' @param L vector of text strings containing the name of exposure-induced confounders of M -> Y
-#' @import dplyr
-#' @importFrom nnet multinom
-#' @import magrittr
+#' @return A list containing information about the models, the controlled direct effects computed at
+#' each specified mediator level, the total effect, and the difference between those two measures at each
+#' mediator level
 #' @export
+med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", noint = FALSE, boot = 100,
+                          quants = c(0.025, 0.5, 0.975), mlvl = NULL){
+
+  alen <- levels(dat[[A]])[-1] %>% length
+  mlen <- levels(dat[[M]])[-1] %>% length
+  if(is.null(mlvl)) mlvl <- rbind(rep(0, mlen), diag(mlen), rep(1/mlen, mlen))
+  if(is.null(dim(mlvl))){
+    if(length(mlvl) == mlen) mlvl <- t(mlvl) else stop("Non conformable mlvl")
+  }
+
+  ar_te <- array(NA, dim = c(boot, alen))
+  if(noint == TRUE){ ar_cde <- ar_pm <- ar_cie <- ar_te
+  }else ar_cde <- ar_pm <- ar_cie <- array(dim = c(boot, alen, nrow(mlvl)))
+
+  pb <- txtProgressBar(style = 3)
+  for(i in 1:boot)
+  {
+    tdat <- sample_frac(dat, 1, replace = TRUE)
+    while(min(table(tdat[[A]])) < 20){
+      print("resampling failed, retrying...")
+      tdat <- sample_frac(dat, 1, replace = TRUE)
+    }
+
+    an_dat <- med_iptw.mkdat(tdat, A = A, M = M, Y = Y, C = C, L = L)
+    setTxtProgressBar(pb, (2*i-1)/boot/2)
+    res <- med_iptw.decomp(an_dat, A = A, M = M, Y = Y, regtype = regtype, noint = noint, mlvl = mlvl)
+    setTxtProgressBar(pb, i/boot)
+
+    ar_te[i,] <- res$te
+    if(noint == TRUE) ar_cde[i,] <- res$cde else ar_cde[i,,] <- res$cde
+    if(noint == TRUE) ar_cie[i,] <- res$cde else ar_cie[i,,] <- res$cie
+    if(noint == TRUE) ar_pm[i,] <- res$pm else ar_pm[i,,] <- res$pm
+  }
+  if(noint == TRUE) over <- 2 else over <- c(3,2)
+  te_95 <- lapply(quants, function (i) apply(ar_te, 2, quantile, probs = i, na.rm = TRUE))
+  cde_95 <- lapply(quants, function (i) apply(ar_cde, over, quantile, probs = i, na.rm = TRUE))
+  pm_95 <- lapply(quants, function (i) apply(ar_pm, over, quantile, probs = i, na.rm = TRUE))
+  cie_95 <- lapply(quants, function (i) apply(ar_cie, over, quantile, probs = i, na.rm = TRUE))
+
+  return(list(
+    arrays = list(te = ar_te, cde = ar_cde, cie = ar_cie, pm = ar_pm),
+    te = te_95,
+    cde = cde_95,
+    pm = pm_95,
+    cie = cie_95)
+  )
+}
 med_iptw.mkdat <- function(orig_dat, A, M, Y, C = "", L = ""){
   #replicate input with parentheses
   C <- paste0("(",C,")")
@@ -58,14 +103,14 @@ med_iptw.mkdat <- function(orig_dat, A, M, Y, C = "", L = ""){
 #' @import magrittr
 med_iptw.decomp <- function(an_dat, A, M, Y, regtype = "gaussian", noint = FALSE, mlvl = NULL){
   #build models
-  med_iptw.mkymod <- function(dat, regtype, noint, Y, X, M){
+  med_iptw.mkymod <- function(dat, regtype, noint, Y, A, M){
     #Make formula
-    if(noint == TRUE){ form <- as.formula(paste0(Y, "~", paste(X, M, sep = "+")))
-    }else form <- as.formula(paste0(Y, "~", paste(X, M, paste0(X, "*", M), sep = "+")))
+    if(noint == TRUE){ form <- as.formula(paste0(Y, "~", paste(A, M, sep = "+")))
+    }else form <- as.formula(paste0(Y, "~", paste(A, M, paste0(A, "*", M), sep = "+")))
 
     #models
     ymod_cde <- glm(data = an_dat, form, weights = ipw_med, family = regtype)
-    ymod_te <- glm(data = an_dat, as.formula(paste0(Y, "~", X)), weights = ipw_conf, family = regtype)
+    ymod_te <- glm(data = an_dat, as.formula(paste0(Y, "~", A)), weights = ipw_conf, family = regtype)
     return(list(cde = ymod_cde, te = ymod_te))
   }
   #get lists of results
@@ -95,7 +140,7 @@ med_iptw.decomp <- function(an_dat, A, M, Y, regtype = "gaussian", noint = FALSE
   if(noint == FALSE) if(is.null(mlvl)) mlvl <- rbind(rep(0, mlen), diag(mlen), rep(1/mlen, mlen))
 
   #Make model of Y
-  ymods <- med_iptw.mkymod(an_dat, regtype, noint, Y, X, M)
+  ymods <- med_iptw.mkymod(an_dat, regtype, noint, Y, A, M)
   #Break into dummy coeffs
   cde <- med_iptw.break(an_dat, A, M, noint, ymods$cde$coefficients)
   te <- ymods$te$coefficients[-1]
@@ -111,57 +156,3 @@ med_iptw.decomp <- function(an_dat, A, M, Y, regtype = "gaussian", noint = FALSE
   #Return CDE(M) and TE if interaction
   return(list(mods = ymods, cde = cde_ints, te = te, pm = pm, cie = cie))
 }
-
-#' @import dplyr
-#' @importFrom nnet multinom
-#' @import magrittr
-med_iptw.boot <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", noint = FALSE, boot = 100,
-                          quants = c(0.025, 0.5, 0.975), mlvl = NULL){
-
-  alen <- levels(dat[[A]])[-1] %>% length
-  mlen <- levels(dat[[M]])[-1] %>% length
-  if(is.null(mlvl)) mlvl <- rbind(rep(0, mlen), diag(mlen), rep(1/mlen, mlen))
-  if(is.null(dim(mlvl))){
-    if(length(mlvl) == mlen) mlvl <- t(mlvl) else stop("Non conformable mlvl")
-  }
-
-  ar_te <- array(NA, dim = c(boot, alen))
-  if(noint == TRUE){ ar_cde <- ar_pm <- ar_cie <- ar_te
-  }else ar_cde <- ar_pm <- ar_cie <- array(dim = c(boot, alen, nrow(mlvl)))
-
-  pb <- txtProgressBar(style = 3)
-  for(i in 1:boot)
-  {
-    tdat <- sample_frac(dat, 1, replace = TRUE)
-    while(min(table(tdat[[A]])) < 20){
-      print("resampling failed, retrying...")
-      tdat <- sample_frac(dat, 1, replace = TRUE)
-    }
-
-    an_dat <- med_iptw.mkdat(tdat, A = X, M = M, Y = Y, C = C, L = L)
-    setTxtProgressBar(pb, (2*i-1)/boot/2)
-    res <- med_iptw.decomp(an_dat, A = X, M = M, Y = Y, regtype = regtype, noint = noint, mlvl = mlvl)
-    setTxtProgressBar(pb, i/boot)
-
-    ar_te[i,] <- res$te
-    if(noint == TRUE) ar_cde[i,] <- res$cde else ar_cde[i,,] <- res$cde
-    if(noint == TRUE) ar_cie[i,] <- res$cde else ar_cie[i,,] <- res$cie
-    if(noint == TRUE) ar_pm[i,] <- res$pm else ar_pm[i,,] <- res$pm
-  }
-  if(noint == TRUE) over <- 2 else over <- c(3,2)
-  te_95 <- lapply(quants, function (i) apply(ar_te, 2, quantile, probs = i, na.rm = TRUE))
-  cde_95 <- lapply(quants, function (i) apply(ar_cde, over, quantile, probs = i, na.rm = TRUE))
-  pm_95 <- lapply(quants, function (i) apply(ar_pm, over, quantile, probs = i, na.rm = TRUE))
-  cie_95 <- lapply(quants, function (i) apply(ar_cie, over, quantile, probs = i, na.rm = TRUE))
-
-  return(list(
-    arrays = list(te = ar_te, cde = ar_cde, cie = ar_cie, pm = ar_pm),
-    te = te_95,
-    cde = cde_95,
-    pm = pm_95,
-    cie = cie_95)
-  )
-}
-
-
-

@@ -2,7 +2,8 @@
 % Please edit documentation in R/med_reg.R
 \name{med_reg}
 \alias{med_reg}
-\title{med_reg}
+\title{\code{med_reg} Gives controlled direct effect, natural indirect effect, natural direct effect using regression-based formulas
+affording the best statistical power}
 \usage{
 med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE,
   ref = 0, treat = 1)
@@ -10,13 +11,13 @@ med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE,
 \arguments{
 \item{df}{Data frame}
 
-\item{X}{exposure}
+\item{X}{exposure, can be continuous or categorical}
 
-\item{M}{mediator}
+\item{M}{mediator, must be continuous for the moment}
 
-\item{Y}{outcome}
+\item{Y}{outcome, must be continuous for the moment}
 
-\item{C}{confounders of exposure-outcome or mediator-outcome association}
+\item{C}{confounders of exposure-outcome or mediator-outcome association. Can take any form}
 
 \item{noint}{supress exposure-mediator interaction term}
 
@@ -29,6 +30,7 @@ med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE,
 \item{treat}{treatment level of exposure, 1 by default}
 }
 \description{
-Gives controlled direct effect, natural indirect effect, natural direct effect
+\code{med_reg} Gives controlled direct effect, natural indirect effect, natural direct effect using regression-based formulas
+affording the best statistical power
 }
 
