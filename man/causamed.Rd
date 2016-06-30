@@ -4,8 +4,8 @@
 \name{causamed}
 \alias{causamed}
 \alias{causamed-package}
-\title{Causamed: A package for hopeless mediation things.}
+\title{Causamed: A package for mediation, and so on}
 \description{
-Causamed: A package for hopeless mediation things.
+Causamed: A package for mediation, and so on
 }
 

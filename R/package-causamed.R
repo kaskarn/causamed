@@ -1,4 +1,4 @@
-#' Causamed: A package for hopeless mediation things.
+#' Causamed: A package for mediation, and so on
 #'
 #' @docType package
 #' @name causamed

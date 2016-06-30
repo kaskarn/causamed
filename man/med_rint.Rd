@@ -8,21 +8,19 @@ med_rint(dat, A, M, Y, C = "", L, astar = "astar", boot = 10,
   quants = c(0.025, 0.5, 0.975), alex = FALSE)
 }
 \arguments{
-\item{A}{Text string containing the name of the exposure variable}
+\item{A}{a character string containing the name of the exposure variable. A must be categorical/binary}
 
-\item{M}{Text string containing the name of the mediator variable}
+\item{M}{a character string containing the name of the mediator variable. M must be categorical/binary}
 
-\item{Y}{vector of text strings containing the name of the outcome variable}
+\item{Y}{a character string containing the name of the outcome variable. At the moment, Y must be continuous}
 
-\item{C}{vector of text strings containing the name or expression of confounder variables}
+\item{C}{list of character strings containing the name or expression of confounder variables}
 
-\item{astar}{optional alternative name for (pseudo) randomized treatment a*}
+\item{astar}{optional alternative name for (pseudo) randomized treatment level a*}
 
 \item{boot}{number of bootstrap samples (default 10 for testing)}
 
 \item{quants}{optionally specify own confidence interval (by default: 95p CI)}
-
-\item{alex}{keeping this in case num specification was right}
 
 \item{orig_dat}{The original dataset}
 }
@@ -35,5 +33,16 @@ for the randomized interventional analogue direct and indirect effects
 analogues of the natural direct effect, natural indirect effect and total effect,
 in the presence of exposure-induced confounding of M -> Y. Gives bootstrapped confidence
 interval. To do: extend to multiple confounders. Might or might not work at the moment.
+}
+\details{
+The procedure is described in chapter 5.4.2 of Tyler's book
+}
+\examples{
+\donttest{my_list <- med_rint(dat = df,
+X = "my_exposure",
+M = "my_mediator",
+Y = "my_binary_outcome",
+C = c("a_confounder", "another_confounder"),
+fam = binomial(logit), boot = 1000)}
 }
 

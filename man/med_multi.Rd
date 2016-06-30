@@ -16,7 +16,7 @@ med_multi(dat, X, Y, M, C, fam = gaussian(link = "identity"), boot = 10,
 
 \item{C}{confounders of either X -> M and/or M -> Y.}
 
-\item{fam}{specifies distribution of residuals in the GLM}
+\item{fam}{specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)}
 
 \item{boot}{number of bootstrap samples used to build the 95p confidence intervals}
 
@@ -25,13 +25,13 @@ med_multi(dat, X, Y, M, C, fam = gaussian(link = "identity"), boot = 10,
 \description{
 Decomposes the effect of an exposure on an outcome into a direct effect operating through a set of intermediary
 variables, and a direct effect involving other pathways. A key assumption is the dual lack of confounding of the
-exposure-outcome, and the mediator-outcome associations.
+exposure-outcome, and the mediator-outcome associations. Described in chapter 5.2.1 of Tyler's book.
 }
 \examples{
 \donttest{my_list <- med_multi(dat = df,
 X = my_exposure, M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
-Y = my_binary_outcome,
+Y = my_continuous_outcome,
 C = a_confounder + another_confounder + my_cubic_spline_term,
-fam = binomial(logit), boot = 1000)}
+fam = gaussian(link = "identity"), boot = 1000)}
 }
 

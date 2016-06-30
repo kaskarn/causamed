@@ -3,19 +3,33 @@
 \name{med_iptw}
 \alias{med_iptw}
 \title{\code{med_iptw} Computes CDE(M) for a given mediator level, in a setting with an exposure-induced confounder of
-the mediator-outcome association}
+the mediator-outcome association. Described in chapter 5.3.1 of Tyler's book}
 \usage{
 med_iptw(dat, A, M, Y, C = "", L = "", regtype = "gaussian",
-  noint = FALSE, boot = 100, quants = c(0.025, 0.5, 0.975), mlvl = NULL)
+  noint = FALSE, boot = 10, quants = c(0.025, 0.5, 0.975), mlvl = NULL)
 }
 \arguments{
-\item{A}{Text string containing the name of the exposure variable}
+\item{A}{a character string containing the name of the exposure variable. A must be categorical/binary}
 
-\item{M}{Text string containing the name of the mediator variable}
+\item{M}{a character string containing the name of the mediator variable. M must be categorical/binary}
+
+\item{Y}{a character string containing the name of the outcome variable. At the moment, Y must be continuous, ordinal or binary}
 
 \item{C}{vector of text strings containing the name or expression of confounder variables}
 
 \item{L}{vector of text strings containing the name of exposure-induced confounders of M -> Y}
+
+\item{regtype}{specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)}
+
+\item{noint}{drops the exposure-mediator interaction, in which case the CDE = NDE}
+
+\item{boot}{specifies the number of bootstrap samples drawn to make the confidence intervals}
+
+\item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
+
+\item{mlvl}{a matrix of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
+(1) the identity matrix with an extra row of zeros (everyone unexposed), and (2) p = 1/k across all k categories of the
+mediator.}
 
 \item{orig_dat}{The original dataset}
 }
@@ -26,6 +40,14 @@ mediator level
 }
 \description{
 \code{med_iptw} Computes CDE(M) for a given mediator level, in a setting with an exposure-induced confounder of
-the mediator-outcome association
+the mediator-outcome association. Described in chapter 5.3.1 of Tyler's book
+}
+\examples{
+\donttest{my_list <- med_iptw(dat = df,
+X = "my_exposure",
+M = "my_mediator",
+Y = "my_binary_outcome",
+C = c("a_confounder", "another_confounder"),
+regtype = binomial(logit), boot = 1000)}
 }
 

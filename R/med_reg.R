@@ -1,5 +1,5 @@
 #' \code{med_reg} Gives controlled direct effect, natural indirect effect, natural direct effect using regression-based formulas
-#' affording the best statistical power
+#' affording the best statistical power. The procedure is described in chapter 3.1.1 of Tyler's book
 #'
 #' @param df Data frame
 #' @param X exposure, can be continuous or categorical
@@ -11,39 +11,54 @@
 #' @param delta whether the delta method should be used to get confidence intervals
 #' @param ref referent level of exposure, 0 by default
 #' @param treat treatment level of exposure, 1 by default
+#' @return a list composed of the natural direct effect, natural indirect effect, total effect, and a controlled
+#' direct effect for each line given in \code{mlvl = }
+#' @examples
+#' \donttest{
+#' my_list <-med_reg(my_df,
+#' X = "my_exposure",
+#' M = "my_continuous_mediator",
+#' Y = "my_continuous_outcome",
+#' C = c("confounder_1", "confounder_2"),
+#' treat = high_exposure_level,
+#' ref = low_exposure_level,
+#' mlvl = seq(25, 40, by=5) ## possible BMI values for the mediator
+#' }
 #' @export
 med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE, ref = 0, treat = 1){
 # Twoway decomposition indirect and direct effects  (VDW)
 # for continuous mediator and outcome
 
-# Sets position and lengths of coefficient vectors
+  # Sets position and lengths of coefficient vectors
   if(is.factor(df[[X]])) xlen <- levels(df[[X]]) %>% length - 1 else xlen <- 1
   if(is.factor(df[[M]])) mlen <- levels(df[[M]]) %>% length - 1 else mlen <- 1
+
+  # Average value of confounders for use in formula
   c_mu <- lapply(C, function (i) if(is.factor(df[[i]])) table(df[[i]])[-1]/nrow(df) else mean(df[[i]], na.rm = TRUE)) %>% unlist
 
-#  throws error if needed
+  # Throw error if needed
   if((xlen > 1 | mlen > 1) & delta == TRUE) stop("Standard error must be estimated by bootstrapping for polytomous treatment or mediator")
 
-  #adds parentheses to allow flexible model specification
+  # Adds parentheses to allow flexible model specification
   for(i in c("X","M","Y","C")) assign(i, paste0("(",get(i),")"))
 
-  #model of mediator
+  # Model of mediator
   m1 <- lm(data = df, as.formula(paste(M, paste(X, paste(C, collapse = "+"), sep = "+"),  sep = "~")))
 
-  #model of outcome
+  # Model of outcome
   if(noint) { m2 <- lm(data = df, as.formula(paste(Y, paste(X, M, paste(C, collapse = "+"), sep = "+"),  sep = "~")))
   }else m2 <-  lm(data = df, as.formula(paste(Y, paste(X, M, paste(C, collapse = "+"), paste(X,M, sep = "*"), sep = "+"),  sep = "~")))
 
-  #breaks up results into different variable coefficients
+  # Break up results into different variable coefficients
   p1 <- cumsum(c(1,xlen,length(c_mu)))
   p2 <- cumsum(c(1,xlen,mlen,length(c_mu),mlen*xlen))
 
-  #creates shorthands for coefficients to be used
+  # Create shorthands for coefficients to be used
   b0 <- m1$coefficients[1]
   for(i in 1:4) assign(paste0("t",i), c(m2$coefficients, rep(0,xlen*mlen*noint))[(p2[i]+1):p2[i+1]] %>% unname)
   for(i in 1:2) assign(paste0("b",i), m1$coefficients[(p1[i]+1):p1[i+1]] %>% unname)
 
-  #output results, optionally with controlled direct effects
+  # Output results, optionally giving a controlled direct effect for each specified level of mediator
   out <- list(
     nde = (t1 + t4*b0 + t4*b1*ref + t4*b2%*%c_mu)*(treat - ref),
     nie = (t2*b1 + t4*b1*treat)*(treat - ref),
@@ -52,14 +67,13 @@ med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FAL
   )
   if (!is.null(mlvl)) out <- list(out, cde = do.call(rbind, lapply(mlvl, function (i) ((t1 + t4*i)*(treat - ref)) )) )
 
-  #Delta method
+  # Delta method
   if(delta == FALSE){ return(out)
   }else{
     sigma <- cbind(
       rbind(vcov(m1), matrix(0, length(m2$coefficients), length(m1$coefficients))),
       rbind(vcov(m2), matrix(0, length(m1$coefficients), length(m2$coefficients)))
     )
-    #same for Gamma
     gamma <- list(
       nde = c(t4, t4*ref, t4*c_mu, 0, 1, 0, b0 + b1*ref + b2%*%c_mu, rep(0, length(c_mu))),
       nie = c(0, t2 + t4*treat, rep(0, length(c_mu)), 0, 0, b1, b1*treat, rep(0, length(c_mu)))

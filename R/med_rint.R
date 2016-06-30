@@ -5,24 +5,34 @@
 #' in the presence of exposure-induced confounding of M -> Y. Gives bootstrapped confidence
 #' interval. To do: extend to multiple confounders. Might or might not work at the moment.
 #'
+#' The procedure is described in chapter 5.4.2 of Tyler's book
+#'
 #' @param orig_dat The original dataset
-#' @param A Text string containing the name of the exposure variable
-#' @param M Text string containing the name of the mediator variable
-#' @param Y vector of text strings containing the name of the outcome variable
-#' @param astar optional alternative name for (pseudo) randomized treatment a*
-#' @param C vector of text strings containing the name or expression of confounder variables
+#' @param A a character string containing the name of the exposure variable. A must be categorical/binary
+#' @param M a character string containing the name of the mediator variable. M must be categorical/binary
+#' @param Y a character string containing the name of the outcome variable. At the moment, Y must be continuous
+#' @param astar optional alternative name for (pseudo) randomized treatment level a*
+#' @param C list of character strings containing the name or expression of confounder variables
 #' @param quants optionally specify own confidence interval (by default: 95p CI)
-#' @param alex keeping this in case num specification was right
 #' @param boot number of bootstrap samples (default 10 for testing)
 #' @return A large list containing meta-data on the procedure, along with the median and 95p confidence interval
 #' for the randomized interventional analogue direct and indirect effects
+#' @examples \donttest{my_list <- med_rint(dat = df,
+#' X = "my_exposure",
+#' M = "my_mediator",
+#' Y = "my_binary_outcome",
+#' C = c("a_confounder", "another_confounder"),
+#' fam = binomial(logit), boot = 1000)}
 #' @export
 med_rint <- function(dat, A, M, Y, C = "", L, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), alex = FALSE){
   alen <- levels(dat[[A]])[-1] %>% length
   mlen <- levels(dat[[M]])[-1] %>% length
 
+  # Initialize arrays of results and progress bar
   ar_nder <- ar_pm <- ar_nier <- ar_ter <- ar_te <- array(NA, dim = c(boot, alen), dimnames = list(1:boot, levels(dat[[A]])[-1]))
   pb <- txtProgressBar(style = 3)
+
+  # Start bootstrapping
   for(i in 1:boot)
   {
     tdat <- sample_frac(dat, 1, replace = TRUE)
@@ -31,8 +41,11 @@ med_rint <- function(dat, A, M, Y, C = "", L, astar = "astar", boot = 10, quants
       tdat <- sample_frac(dat, 1, replace = TRUE)
     }
 
+    # Make weights
     rint_items <- rint_med.mkdata(tdat, A = A, C = C, M = M, L = L)
     setTxtProgressBar(pb, (2*i-1)/boot/2)
+
+    # Calculate effects
     if(alex){ res <- rint_med.decompose(rint_items$an_dat %>% mutate(w = w_ak), Y = Y, A = A)
     }else res <- rint_med.decompose(rint_items$an_dat, Y = Y, A = A)
 
@@ -59,6 +72,8 @@ med_rint <- function(dat, A, M, Y, C = "", L, astar = "astar", boot = 10, quants
     nier = nier_95)
   )
 }
+
+
 #' rint_med.mkdata
 #'
 #' Creates the analytic dataset to compute NDEr, NIEr and TEr, the random interventional
@@ -168,6 +183,8 @@ rint_med.mkdata <- function(orig_dat, A, M, Y, C = "", L){
     num_ak = num_items$num_ak
   ))
 }
+
+
 
 #' rint_med.decomposes
 #'

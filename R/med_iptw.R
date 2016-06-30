@@ -1,16 +1,30 @@
 #' \code{med_iptw} Computes CDE(M) for a given mediator level, in a setting with an exposure-induced confounder of
-#' the mediator-outcome association
+#' the mediator-outcome association. Described in chapter 5.3.1 of Tyler's book
 #'
 #' @param orig_dat The original dataset
-#' @param A Text string containing the name of the exposure variable
-#' @param M Text string containing the name of the mediator variable
+#' @param A a character string containing the name of the exposure variable. A must be categorical/binary
+#' @param M a character string containing the name of the mediator variable. M must be categorical/binary
+#' @param Y a character string containing the name of the outcome variable. At the moment, Y must be continuous, ordinal or binary
 #' @param C vector of text strings containing the name or expression of confounder variables
 #' @param L vector of text strings containing the name of exposure-induced confounders of M -> Y
+#' @param noint drops the exposure-mediator interaction, in which case the CDE = NDE
+#' @param mlvl a matrix of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
+#' (1) the identity matrix with an extra row of zeros (everyone unexposed), and (2) p = 1/k across all k categories of the
+#' mediator.
+#' @param regtype specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)
+#' @param boot specifies the number of bootstrap samples drawn to make the confidence intervals
+#' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
 #' @return A list containing information about the models, the controlled direct effects computed at
 #' each specified mediator level, the total effect, and the difference between those two measures at each
 #' mediator level
+#' @examples \donttest{my_list <- med_iptw(dat = df,
+#' X = "my_exposure",
+#' M = "my_mediator",
+#' Y = "my_binary_outcome",
+#' C = c("a_confounder", "another_confounder"),
+#' regtype = binomial(logit), boot = 1000)}
 #' @export
-med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", noint = FALSE, boot = 100,
+med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", noint = FALSE, boot = 10,
                           quants = c(0.025, 0.5, 0.975), mlvl = NULL){
 
   alen <- levels(dat[[A]])[-1] %>% length
