@@ -18,11 +18,11 @@
 #' @return A large list containing meta-data on the procedure, along with the median and 95p confidence interval
 #' for the randomized interventional analogue direct and indirect effects
 #' @examples \donttest{my_list <- med_rint(dat = df,
-#' X = "my_exposure",
-#' M = "my_mediator",
-#' Y = "my_binary_outcome",
-#' C = c("a_confounder", "another_confounder"),
-#' fam = binomial(logit), boot = 1000)}
+#'  X = "my_exposure",
+#'  M = "my_mediator",
+#'  Y = "my_binary_outcome",
+#'  C = c("a_confounder", "another_confounder"),
+#'  fam = binomial(logit), boot = 1000)}
 #' @export
 med_rint <- function(dat, A, M, Y, C = "", L, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), alex = FALSE){
   alen <- levels(dat[[A]])[-1] %>% length

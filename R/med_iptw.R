@@ -18,11 +18,11 @@
 #' each specified mediator level, the total effect, and the difference between those two measures at each
 #' mediator level
 #' @examples \donttest{my_list <- med_iptw(dat = df,
-#' X = "my_exposure",
-#' M = "my_mediator",
-#' Y = "my_binary_outcome",
-#' C = c("a_confounder", "another_confounder"),
-#' regtype = binomial(logit), boot = 1000)}
+#'  X = "my_exposure",
+#'  M = "my_mediator",
+#'  Y = "my_binary_outcome",
+#'  C = c("a_confounder", "another_confounder"),
+#'  regtype = binomial(logit), boot = 1000)}
 #' @export
 med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", noint = FALSE, boot = 10,
                           quants = c(0.025, 0.5, 0.975), mlvl = NULL){

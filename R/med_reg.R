@@ -12,17 +12,17 @@
 #' @param ref referent level of exposure, 0 by default
 #' @param treat treatment level of exposure, 1 by default
 #' @return a list composed of the natural direct effect, natural indirect effect, total effect, and a controlled
-#' direct effect for each line given in \code{mlvl = }
+#' direct effect for each line given in \code{mlvl}
 #' @examples
 #' \donttest{
 #' my_list <-med_reg(my_df,
-#' X = "my_exposure",
-#' M = "my_continuous_mediator",
-#' Y = "my_continuous_outcome",
-#' C = c("confounder_1", "confounder_2"),
-#' treat = high_exposure_level,
-#' ref = low_exposure_level,
-#' mlvl = seq(25, 40, by=5) ## possible BMI values for the mediator
+#'  X = "my_exposure",
+#'  M = "my_continuous_mediator",
+#'  Y = "my_continuous_outcome",
+#'  C = c("confounder_1", "confounder_2"),
+#'  treat = high_exposure_level,
+#'  ref = low_exposure_level,
+#'  mlvl = seq(25, 40, by=5) ## possible BMI values for the mediator
 #' }
 #' @export
 med_reg <- function(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE, ref = 0, treat = 1){
