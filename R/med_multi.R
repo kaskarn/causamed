@@ -1,16 +1,17 @@
-#' med_multi
+#' \code{med_multi}
 #'
 #' Decomposes the effect of an exposure on an outcome into a direct effect operating through a set of intermediary
 #' variables, and a direct effect involving other pathways. A key assumption is the dual lack of confounding of the
 #' exposure-outcome, and the mediator-outcome associations. Described in chapter 5.2.1 of Tyler's book.
 #'
-#' @param dat a dataframe containing the exposure, outcome, mediators, and confounders
-#' @param A the exposure of interest. Currently must be categorical (or binary)
-#' @param Y the outcome, currently must be continuous, ordinal or binary
-#' @param C confounders of either X -> M and/or M -> Y.
-#' @param fam specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)
-#' @param boot number of bootstrap samples used to build the 95p confidence intervals
-#' @param nmin number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
+#' @param dat  a dataframe containing the exposure, outcome, mediators, and confounders
+#' @param A  the exposure of interest. Currently must be categorical (or binary)
+#' @param Y  the outcome, currently must be continuous, ordinal or binary
+#' @param C  confounders of either X -> M and/or M -> Y.
+#' @param M  the mediators of interest
+#' @param fam  specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)
+#' @param boot  number of bootstrap samples used to build the 95p confidence intervals
+#' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
 #' @examples \donttest{my_list <- med_multi(dat = df,
 #'  X = my_exposure, M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
 #'  Y = my_continuous_outcome,
