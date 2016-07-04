@@ -57,7 +57,7 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
       if(is.factor(dat[[mcol]])) mlvl <- (table(dat[[mcol]]) %>% prop.table)[-1]
       else mlvl <- mean(dat[[mcol]], na.rm = TRUE)
     }
-    cde[i,,] <- g1 + matrix(k3, alen, mlen) %*% mlvl
+    cde[i,,] <- g1 + t(matrix(k3, alen, mlen) %*% mlvl)
   }
   out <- list(g1 = g1,
               k2 = k2, k3 = k3,

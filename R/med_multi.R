@@ -13,15 +13,14 @@
 #' @param boot  number of bootstrap samples used to build the 95p confidence intervals
 #' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
 #' @examples \donttest{my_list <- med_multi(dat = df,
-#'  X = my_exposure, M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
+#'  X = my_exposure,
+#'  M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
 #'  Y = my_continuous_outcome,
-#'  C = a_confounder + another_confounder + my_cubic_spline_term,
+#'  C = a_confounder + another_confounder * anything,
 #'  fam = gaussian(link = "identity"), boot = 1000)}
 #' @export
 med_multi <- function(dat, A, Y, M, C, fam = gaussian(link="identity"), boot = 10, nmin = 10){
   # Setup
-  yform <- deparse(substitute(Y ~ A + M + C))
-  aform <- deparse(substitute(A ~ C))
   acol <- deparse(substitute(A)) %>% match(names(dat)) #for speedy addressing
   ycol <- deparse(substitute(Y)) %>% match(names(dat)) #moar speed
   ref <- levels(dat[[acol]])[1]
@@ -41,8 +40,8 @@ med_multi <- function(dat, A, Y, M, C, fam = gaussian(link="identity"), boot = 1
     }
 
     # Run exposure and outcome models
-    amod <- multinom(data = dat[bi,], formula = aform, trace = FALSE)
-    ymod <- glm(data = dat[bi,], formula = yform, family = fam)
+    amod <- multinom(data = dat[bi,], substitute(A ~ C), trace = FALSE)
+    ymod <- glm(data = dat[bi,], substitute(Y ~ A + M + C), family = fam)
 
     # Get marginal and conditional probabilities of A
     pa <- (table(dat[bi,][[acol]]) %>% prop.table)
