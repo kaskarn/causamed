@@ -31,7 +31,7 @@ med_reg(df, X, M, Y, C = "", noint = FALSE, mlvl = NULL, delta = FALSE,
 }
 \value{
 a list composed of the natural direct effect, natural indirect effect, total effect, and a controlled
-direct effect for each line given in \code{mlvl = }
+direct effect for each line given in \code{mlvl}
 }
 \description{
 \code{med_reg} Gives controlled direct effect, natural indirect effect, natural direct effect using regression-based formulas
@@ -40,13 +40,13 @@ affording the best statistical power. The procedure is described in chapter 3.1.
 \examples{
 \donttest{
 my_list <-med_reg(my_df,
-X = "my_exposure",
-M = "my_continuous_mediator",
-Y = "my_continuous_outcome",
-C = c("confounder_1", "confounder_2"),
-treat = high_exposure_level,
-ref = low_exposure_level,
-mlvl = seq(25, 40, by=5) ## possible BMI values for the mediator
+ X = "my_exposure",
+ M = "my_continuous_mediator",
+ Y = "my_continuous_outcome",
+ C = c("confounder_1", "confounder_2"),
+ treat = high_exposure_level,
+ ref = low_exposure_level,
+ mlvl = seq(25, 40, by=5) ## possible BMI values for the mediator
 }
 }
 

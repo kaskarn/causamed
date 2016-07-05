@@ -21,6 +21,7 @@
 #' @return ymod2 the marginal strucutral model of Y allowing a A*M interaction
 #' @examples \donttest{
 #' my_list <- med_iptw(dat = df,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, boot = 1000)
+#' }
 #' @export
 med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", boot = 10,
                      quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit){

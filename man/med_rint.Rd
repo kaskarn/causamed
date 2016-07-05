@@ -4,29 +4,43 @@
 \alias{med_rint}
 \title{Random interventional analogue effects}
 \usage{
-med_rint(dat, A, M, Y, C = "", L, astar = "astar", boot = 10,
-  quants = c(0.025, 0.5, 0.975), alex = FALSE)
+med_rint(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10,
+  quants = c(0.025, 0.5, 0.975), nmin = 20)
 }
 \arguments{
-\item{A}{a character string containing the name of the exposure variable. A must be categorical/binary}
+\item{dat}{The original dataset}
 
-\item{M}{a character string containing the name of the mediator variable. M must be categorical/binary}
+\item{A}{the exposure of interest. Must be binary or categorical}
 
-\item{Y}{a character string containing the name of the outcome variable. At the moment, Y must be continuous}
+\item{M}{the mediators of interest. Must be binary or categorical}
 
-\item{C}{list of character strings containing the name or expression of confounder variables}
+\item{Y}{the outcome, currently must be continuous}
 
-\item{astar}{optional alternative name for (pseudo) randomized treatment level a*}
+\item{C}{confounders of either X -> M and/or M -> Y. Can take any form, specified as formula}
 
-\item{boot}{number of bootstrap samples (default 10 for testing)}
+\item{L}{the exposure-induced confounder of the association of M with Y. Must be binary or categorical}
 
-\item{quants}{optionally specify own confidence interval (by default: 95p CI)}
+\item{boot}{specifies the number of bootstrap samples drawn to make the confidence intervals. Default is 10 for testing purposes}
 
-\item{orig_dat}{The original dataset}
+\item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
+
+\item{mlvl}{a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
+the observed sample distributions}
 }
 \value{
-A large list containing meta-data on the procedure, along with the median and 95p confidence interval
-for the randomized interventional analogue direct and indirect effects
+An S3 object of class \code{cmed.ipw} containing:
+
+nde mean and 95p confidence intervals for NDEr
+
+nie mean and 95p confidence intervals for NIEr
+
+te mean and 95p confidence intervals for the total effect
+
+ter mean and 95p confidence intervals for the random interventional analogue to the total effect
+
+boots a list with nde, nie, te, and ter resutls for each bootstrap sample
+
+raw a list of the duplicated dataset and intermediary propensity scores calculated from original data (not resampled)
 }
 \description{
 \code{med_rint} computes NDEr, NIEr and TEr, the random interventional
@@ -38,11 +52,8 @@ interval. To do: extend to multiple confounders. Might or might not work at the 
 The procedure is described in chapter 5.4.2 of Tyler's book
 }
 \examples{
-\donttest{my_list <- med_rint(dat = df,
-X = "my_exposure",
-M = "my_mediator",
-Y = "my_binary_outcome",
-C = c("a_confounder", "another_confounder"),
-fam = binomial(logit), boot = 1000)}
+\donttest{
+my_list <- med_rint(dat = mydat,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, L = my_problem, boot = 1000)
+}
 }
 

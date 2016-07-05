@@ -2,17 +2,19 @@
 % Please edit documentation in R/med_multi.R
 \name{med_multi}
 \alias{med_multi}
-\title{med_multi}
+\title{\code{med_multi}}
 \usage{
-med_multi(dat, X, Y, M, C, fam = gaussian(link = "identity"), boot = 10,
+med_multi(dat, A, Y, M, C, fam = gaussian(link = "identity"), boot = 10,
   nmin = 10)
 }
 \arguments{
 \item{dat}{a dataframe containing the exposure, outcome, mediators, and confounders}
 
-\item{X}{the exposure of interest. Currently must be categorical (or binary)}
+\item{A}{the exposure of interest. Currently must be categorical (or binary)}
 
 \item{Y}{the outcome, currently must be continuous, ordinal or binary}
+
+\item{M}{the mediators of interest}
 
 \item{C}{confounders of either X -> M and/or M -> Y.}
 
@@ -29,9 +31,10 @@ exposure-outcome, and the mediator-outcome associations. Described in chapter 5.
 }
 \examples{
 \donttest{my_list <- med_multi(dat = df,
-X = my_exposure, M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
-Y = my_continuous_outcome,
-C = a_confounder + another_confounder + my_cubic_spline_term,
-fam = gaussian(link = "identity"), boot = 1000)}
+ X = my_exposure,
+ M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
+ Y = my_continuous_outcome,
+ C = a_confounder + another_confounder * anything,
+ fam = gaussian(link = "identity"), boot = 1000)}
 }
 

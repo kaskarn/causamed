@@ -26,6 +26,7 @@
 #' @return raw a list of the duplicated dataset and intermediary propensity scores calculated from original data (not resampled)
 #' @examples \donttest{
 #' my_list <- med_rint(dat = mydat,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, L = my_problem, boot = 1000)
+#' }
 #' @export
 med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), nmin = 20){
 
