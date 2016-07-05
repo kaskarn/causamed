@@ -7,208 +7,98 @@
 #'
 #' The procedure is described in chapter 5.4.2 of Tyler's book
 #'
-#' @param orig_dat The original dataset
-#' @param A a character string containing the name of the exposure variable. A must be categorical/binary
-#' @param M a character string containing the name of the mediator variable. M must be categorical/binary
-#' @param Y a character string containing the name of the outcome variable. At the moment, Y must be continuous
-#' @param astar optional alternative name for (pseudo) randomized treatment level a*
-#' @param C list of character strings containing the name or expression of confounder variables
-#' @param quants optionally specify own confidence interval (by default: 95p CI)
-#' @param boot number of bootstrap samples (default 10 for testing)
-#' @return A large list containing meta-data on the procedure, along with the median and 95p confidence interval
-#' for the randomized interventional analogue direct and indirect effects
-#' @examples \donttest{my_list <- med_rint(dat = df,
-#'  X = "my_exposure",
-#'  M = "my_mediator",
-#'  Y = "my_binary_outcome",
-#'  C = c("a_confounder", "another_confounder"),
-#'  fam = binomial(logit), boot = 1000)}
+#' @param dat The original dataset
+#' @param A  the exposure of interest. Must be binary or categorical
+#' @param Y  the outcome, currently must be continuous
+#' @param C  confounders of either X -> M and/or M -> Y. Can take any form, specified as formula
+#' @param M  the mediators of interest. Must be binary or categorical
+#' @param L  the exposure-induced confounder of the association of M with Y. Must be binary or categorical
+#' @param mlvl a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
+#' the observed sample distributions
+#' @param boot specifies the number of bootstrap samples drawn to make the confidence intervals. Default is 10 for testing purposes
+#' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
+#' @return An S3 object of class \code{cmed.ipw} containing:
+#' @return nde mean and 95p confidence intervals for NDEr
+#' @return nie mean and 95p confidence intervals for NIEr
+#' @return te mean and 95p confidence intervals for the total effect
+#' @return ter mean and 95p confidence intervals for the random interventional analogue to the total effect
+#' @return boots a list with nde, nie, te, and ter resutls for each bootstrap sample
+#' @return raw a list of the duplicated dataset and intermediary propensity scores calculated from original data (not resampled)
+#' @examples \donttest{
+#' my_list <- med_rint(dat = mydat,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, L = my_problem, boot = 1000)
 #' @export
-med_rint <- function(dat, A, M, Y, C = "", L, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), alex = FALSE){
-  alen <- levels(dat[[A]])[-1] %>% length
-  mlen <- levels(dat[[M]])[-1] %>% length
+med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), nmin = 20){
 
-  # Initialize arrays of results and progress bar
-  ar_nder <- ar_pm <- ar_nier <- ar_ter <- ar_te <- array(NA, dim = c(boot, alen), dimnames = list(1:boot, levels(dat[[A]])[-1]))
+  acol <- deparse(substitute(A)) %>% match(names(dat))
+  ycol <- deparse(substitute(Y)) %>% match(names(dat))
+  mcol <- deparse(substitute(M)) %>% match(names(dat))
+  lcol <- deparse(substitute(L)) %>% match(names(dat))
+  lchar <- deparse(substitute(L))
+  achar <- deparse(substitute(A))
+
+  alen <- nlevels(dat[[acol]]) - 1
+  ref <- levels(dat[[acol]])[1]
+
+  nde <- nie <- te <- ter <- niewrong <- matrix(NA, nrow = boot, ncol = alen)
   pb <- txtProgressBar(style = 3)
-
-  # Start bootstrapping
-  for(i in 1:boot)
-  {
-    tdat <- sample_frac(dat, 1, replace = TRUE)
-    while(min(table(tdat[[A]])) < 20){
-      print("resampling failed, retrying...")
-      tdat <- sample_frac(dat, 1, replace = TRUE)
+  for(i in 1:boot){
+    #resample
+    if(i == boot){ bi <- 1:nrow(dat)
+    }else{
+      bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      while(min(table(dat[bi,acol])) < nmin) bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
     }
 
-    # Make weights
-    rint_items <- rint_med.mkdata(tdat, A = A, C = C, M = M, L = L)
-    setTxtProgressBar(pb, (2*i-1)/boot/2)
+    #create models from observed data
+    amod <- multinom(data = dat[bi,], substitute(A ~ C), trace = FALSE)
+    mmod <- multinom(data = dat[bi,], substitute(M ~ A + C + L), trace = FALSE)
+    lmod <- multinom(data = dat[bi,], substitute(L ~ A + C), trace = FALSE)
 
-    # Calculate effects
-    if(alex){ res <- rint_med.decompose(rint_items$an_dat %>% mutate(w = w_ak), Y = Y, A = A)
-    }else res <- rint_med.decompose(rint_items$an_dat, Y = Y, A = A)
+    #get probability of observed A and M
+    pac <- predict(amod, newdata = dat[bi,], type = "probs") %>% fmatch(dat[bi,acol])
+    pmlac <- predict(mmod, newdata = dat[bi,], type = "probs") %>% fmatch(dat[bi, mcol])
 
-    setTxtProgressBar(pb, i/boot)
-    ar_ter[i,] <- res$ter
-    ar_nder[i,] <- res$nder
-    ar_nier[i,] <- res$nier
-    ar_pm[i,] <- res$nier / res$ter
-    ar_te[i,] <- res$te
-  }
+    #duplicate dataset
+    ddat <- do.call(rbind, lapply(levels(dat[[acol]]), function (i) mutate(dat[bi,], astar = i)))
+    ddat$astar <- factor(ddat$astar, labels = levels(dat[[acol]]))
 
-  te_95 <- lapply(quants, function (i) apply(ar_te, 2, quantile, probs = i, na.rm = TRUE))
-  ter_95 <- lapply(quants, function (i) apply(ar_ter, 2, quantile, probs = i, na.rm = TRUE))
-  nder_95 <- lapply(quants, function (i) apply(ar_nder, 2, quantile, probs = i, na.rm = TRUE))
-  pm_95 <- lapply(quants, function (i) apply(ar_pm, 2, quantile, probs = i, na.rm = TRUE))
-  nier_95 <- lapply(quants, function (i) apply(ar_nier, 2, quantile, probs = i, na.rm = TRUE))
-
-  return(list(
-    arrays = list(te = ar_te, ter = ar_ter, nder = ar_nder, nier = ar_nier, pm = ar_pm),
-    te = ter_95,
-    ter = ter_95,
-    nder = nder_95,
-    pm = pm_95,
-    nier = nier_95)
-  )
-}
-
-
-#' rint_med.mkdata
-#'
-#' Creates the analytic dataset to compute NDEr, NIEr and TEr, the random interventional
-#' analogues of the natural direct effect, natural indirect effect and total effect,
-#' in the presence of exposure-induced confounding of M -> Y
-rint_med.mkdata <- function(orig_dat, A, M, Y, C = "", L){
-  ### replicate C with parentheses to allow arbitrary syntax in confounder specification (like equations or functions)
-  C <- paste0("(",C,")")
-
-  rint_med.mkform <- function(A, C, L, M){
-    # Creates formulas to be passed to propensity score models
-    a_form <- as.formula(paste0(A, "~", paste0(C, collapse = "+")))
-    m_form <- as.formula(paste0(M, "~", paste(A, paste0(L, collapse = "+"), paste0(C, collapse = "+"), sep = "+")))
-    l_form <- as.formula(paste0(L, "~", A, "+", paste0(C, collapse = "+")))
-    return(list(a_form = a_form, m_form = m_form, l_form = l_form))
-  }
-  rint_med.mkmods <- function(dat, f){
-    # Makes propensity score models from formulas in rint_med.mkform
-    a_mod <- multinom(data = dat, f$a_form, trace = FALSE)
-    m_mod <- multinom(data = dat, f$m_form, trace = FALSE)
-    l_mod <- multinom(data = dat, f$l_form, trace = FALSE)
-    return(list(a_mod = a_mod, m_mod = m_mod, l_mod = l_mod))
-  }
-  rint_med.mkden <- function(dat, mods, A, L){
-    # Makes denominator
-    pmlac <- predict(object = mods$m_mod, newdata = dat, type = "probs") %>% fmatch(dat[[M]])
-    pac <- predict(object = mods$a_mod, newdata = dat, type = "probs") %>% fmatch(dat[[A]])
-    return(list(pmlac = pmlac, pac = pac, den = pac * pmlac))
-  }
-  rint_med.copy_data <- function(dat, A){
-    ## One copy for each value in support of A
-    new <- do.call(rbind, lapply(levels(dat[[A]]), function (i) mutate(dat, astar = i)))
-    new$astar <- factor(new$astar, labels = levels(dat[[A]]))
-    return(new)
-  }
-
-  rint_med.mknum <- function(dat, M, L, A, mmod, lmod){
-    ## get p( l | a*,c) for each value in support of L
-    plasc <- predict(object = lmod, newdata = mutate_(dat, .dots = setNames(list(~astar), A)), type = "probs")
+    #get probability of M under randomized intervention
+    pmlasc <- do.call(cbind, lapply(levels(dat[[lcol]]),
+                     function (i) predict(mmod,
+                                          newdata = mutate_(ddat, .dots = setNames(list(~i, ~astar), list(lchar, achar))),
+                                          type = "probs") %>% fmatch(ddat[[mcol]]))
+    )
+    #get probability of L under randomized intervention
+    plasc <- predict(lmod, newdata = mutate_(ddat, .dots = setNames(list(~astar), achar)), type = "probs")
     if(is.null(dim(plasc))) plasc <- cbind(1-plasc, plasc)
 
-    ## get p( m | l,a*,c) for each value in support of L
-    pmlasc <- lapply(levels(dat[[L]]), function (i)
-                      predict(object = mmod, newdata = mutate_(dat, .dots = setNames(list(~astar), A)) %>%
-                                                       mutate_(.dots = setNames(list(~i), L)),
-                              type = "probs") %>% fmatch(dat[[M]])
-                     ) %>% do.call(cbind, .)
+    #marginalize over L and create weights
+    num <- apply(plasc*pmlasc, 1, sum)
+    ddat$w_a <- 1/pac
+    ddat$w_rint <- num/pac/pmlac
 
-    ## sum p( m | l,a*,c ) * p( l | a*,c ) across levels of L
-    num <- apply((plasc * pmlasc), 1, sum)
+    #run models and store
+    nde[i,] <- lm(data = ddat[ddat$astar == ref,], substitute(Y ~ A), weights = w_rint)$coefficients[-1]
+    for(j in 1:alen){
+      index <- ddat[[acol]] == levels(ddat[[acol]])[j+1] & (ddat$astar %in% c(ref, levels(ddat[[acol]])[j+1]))
+      nie[i,j] <- lm(data = ddat[index,], as.formula(paste0(deparse(substitute(Y)), "~ astar")), weights = w_rint)$coefficients[2]
+    }
 
+    niewrong[i,] <- lm(data = ddat[ddat[[acol]] != ref,], as.formula(paste0(deparse(substitute(Y)), "~ astar")), weights = w_rint)$coefficients[-1]
+    te[i,] <- lm(data = ddat[ddat$astar == ref,], substitute(Y ~ A), weights = w_a)$coefficients[-1]
+    ter[i,] <- lm(data = ddat[ddat$astar == ddat[[acol]],], as.formula(paste0(deparse(substitute(Y)), "~ astar")), weights = w_rint)$coefficients[-1]
 
-    #Same pmlasc as AK
-    pmlasc_ak <- predict(object = mmod,
-                       newdata = mutate_(dat, .dots = setNames(list(~astar), A)),
-                       type = "probs") %>% fmatch(dat[[M]])
-    num_ak <- apply((plasc * pmlasc_ak), 1, sum)
-    return(list(plasc = plasc, pmlasc = pmlasc, num = num, num_ak = num_ak))
+    setTxtProgressBar(pb, i/boot)
   }
 
-  rint_med.mkweight <- function(dat){
-    w <- dat$num/dat$den
-    return(w)
-  }
-  #To get same weights as AK
-  rint_med.mkweight_ak <- function(dat){
-    w <- dat$num_ak/dat$den
-    return(w)
-  }
-
-  ## create models
-  flist <- rint_med.mkform(A, C, L, M)
-  mlist <- rint_med.mkmods(orig_dat, flist)
-
-  ## calculate denominator
-  den_items <- rint_med.mkden(orig_dat, mlist, A, L)
-  orig_dat$ipw_conf <- 1/den_items$pac
-  orig_dat$den <- den_items$den
-
-  ## duplicate dataset
-  an_dat <- rint_med.copy_data(orig_dat, A)
-
-  ## calculate numerator
-  num_items <- rint_med.mknum(an_dat, M, L, A, mmod = mlist$m_mod, lmod = mlist$l_mod)
-  an_dat$num <- num_items$num
-
-  ## calculate weight (regular)
-  an_dat$w <- rint_med.mkweight(an_dat)
-
-  # get same weights as AK
-  an_dat$num_ak <- num_items$num_ak
-  an_dat$w_ak <- rint_med.mkweight_ak(an_dat)
-
-  return(list(
-    models = mlist,
-    an_dat = an_dat,
-    pmlac = den_items$pmlac,
-    pac = den_items$pac,
-    plasc = num_items$plasc,
-    pmlasc = num_items$pmlasc,
-    den = an_dat$den,
-    num = an_dat$num,
-    w = an_dat$w,
-
-    #same weights as AK
-    w_ak = an_dat$w_ak,
-    num_ak = num_items$num_ak
-  ))
-}
-
-
-
-#' rint_med.decomposes
-#'
-#' part of the functio calculating CDE(M) at different values or distributions of M, and computes weights used in
-#' master function
-rint_med.decompose <- function(dat, Y, A, astar = "astar"){
-  ref <- levels(dat[[A]])[1]
-  m_te <- lm(data = dat, as.formula(paste0(Y, "~", A)), weights = ipw_conf)
-  m_ter <- lm(data = dat[dat[[astar]] == dat[[A]],], as.formula(paste0(Y, "~", astar)), weights = w)
-  m_nder <- lm(data = dat[dat[[astar]] == ref,], as.formula(paste0(Y, "~", A)), weights = w)
-  m_nier_prollywrong <- lm(data = dat[dat[[A]] != ref,], as.formula(paste0(Y, "~", astar)), weights = w)
-  nier <- lapply(levels(dat[[A]])[-1],
-                 function(i) lm(data = dat[(dat[[A]] == i) & (dat[[astar]] %in% c(ref,i)),],
-                                as.formula(paste0(Y, "~", astar)),
-                                weights = w)$coefficients[-1]
-                ) %>% unlist
-
-  return(list(
-    models = list(m_te = m_te, m_ter = m_ter, m_nder = m_nder,
-                  m_nier_prollywrong = m_nier_prollywrong),
-    nder = m_nder$coefficients[-1],
-    nier = nier,
-    nier_prollywrong = m_nier_prollywrong$coefficients[-1],
-    ter = m_ter$coefficients[-1],
-    te = m_te$coefficients[-1]
-  ))
+  out <- list(boots = list(nie = nie, niewrong = niewrong, te = te, ter = ter, nde = nde),
+              nie = apply(nie, 2, quantile, probs = quants, na.rm = TRUE),
+              te = apply(te, 2, quantile, probs = quants, na.rm = TRUE),
+              ter = apply(ter, 2, quantile, probs = quants, na.rm = TRUE),
+              nde = apply(nde, 2, quantile, probs = quants, na.rm = TRUE),
+              nie2 = apply(niewrong, 2, quantile, probs = quants, na.rm = TRUE),
+              raw = list(ddat = ddat, pac = pac, pmlac = pmlac, pmlasc = pmlasc, plasc = plasc)
+              )
+  class(out) <- "cmed.rint"
+  return(out)
 }
