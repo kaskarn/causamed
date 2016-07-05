@@ -1,3 +1,5 @@
+#' Marginal structural models to compute controlled direct effects given an exposue-induced confounder of mediator
+#'
 #' \code{med_iptw} Computes CDE(M) for given mediator levels, in a setting with an exposure-induced confounder of
 #' the mediator-outcome association. Described in chapter 5.3.1 of Tyler's book
 #'

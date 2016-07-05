@@ -1,3 +1,5 @@
+#' Structural means model to compute controlled direct effects given an exposue-induced confounder of mediator
+#'
 #' \code{med_smean}
 #'
 #' Returns the controlled direct effect CDE(M) of an exposure A on an outcome Y, not

@@ -66,8 +66,10 @@ med_multi <- function(dat, A, Y, M, C, fam = gaussian(link="identity"), boot = 1
     nie <- q2 / q3
     pm <- NULL #hmm
   }
-  return(list(raw = list(q2 = q2, q3 = q3, nde = nde, nie = nie, pm = pm, ypred = ypred),
+  out <- list(raw = list(q2 = q2, q3 = q3, nde = nde, nie = nie, pm = pm, ypred = ypred),
               nie = apply(nie, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE),
               nde = apply(nde, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE),
-              pm = apply(pm, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE)))
+              pm = apply(pm, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE))
+  class(out) <- "cmed.multi"
+  return(out)
 }
