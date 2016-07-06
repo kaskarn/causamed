@@ -2,11 +2,10 @@
 % Please edit documentation in R/med_iptw.R
 \name{med_iptw}
 \alias{med_iptw}
-\title{\code{med_iptw} Computes CDE(M) for given mediator levels, in a setting with an exposure-induced confounder of
-the mediator-outcome association. Described in chapter 5.3.1 of Tyler's book}
+\title{Marginal structural models to compute controlled direct effects given an exposue-induced confounder of mediator}
 \usage{
-med_iptw(dat, A, M, Y, C = "", L = "", regtype = "gaussian", boot = 10,
-  quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit)
+med_iptw(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian",
+  boot = 10, quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit)
 }
 \arguments{
 \item{dat}{The original dataset}

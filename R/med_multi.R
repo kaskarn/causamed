@@ -19,7 +19,7 @@
 #'  C = a_confounder + another_confounder * anything,
 #'  fam = gaussian(link = "identity"), boot = 1000)}
 #' @export
-med_multi <- function(dat, A, Y, M, C, fam = gaussian(link="identity"), boot = 10, nmin = 10){
+med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), boot = 10, nmin = 10){
   # Setup
   acol <- deparse(substitute(A)) %>% match(names(dat)) #for speedy addressing
   ycol <- deparse(substitute(Y)) %>% match(names(dat)) #moar speed
@@ -32,7 +32,7 @@ med_multi <- function(dat, A, Y, M, C, fam = gaussian(link="identity"), boot = 1
   for(i in 1:boot){
     # Resample
     bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-    while(is.factor(dat[[acol]] && min(table(dat[bi,acol])) < nmin)){
+    while(is.factor(dat[[acol]]) && min(table(dat[bi,acol])) < nmin){
       a <- a + 1
       message("Resampling failed, retrying...")
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)

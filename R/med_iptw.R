@@ -25,7 +25,7 @@
 #' my_list <- med_iptw(dat = df,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, boot = 1000)
 #' }
 #' @export
-med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", boot = 10,
+med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boot = 10,
                      quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit){
 
   acol <- deparse(substitute(A)) %>% match(names(dat))
@@ -38,7 +38,7 @@ med_iptw <- function(dat, A, M, Y, C = "", L = "", regtype = "gaussian", boot = 
   if(class(mlvl) == "table") mlvl <- t(as.matrix(mlvl))
   if(class(mlvl)  == "matrix"){ ilvl <- nrow(mlvl)
   }else ilvl <- 1
-  if(is.null(mlvl)) mlvl <- (table(dat[bi, mcol]) %>% prop.table)[-1]
+  if(is.null(mlvl)) mlvl <- (table(dat[[mcol]]) %>% prop.table)[-1]
 
   pbar <- txtProgressBar(style = 3)
   cde.int <- array(NA, dim = c(boot, alen, ilvl))

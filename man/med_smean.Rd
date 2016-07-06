@@ -2,10 +2,10 @@
 % Please edit documentation in R/med_smean.R
 \name{med_smean}
 \alias{med_smean}
-\title{\code{med_smean}}
+\title{Structural means model to compute controlled direct effects given an exposue-induced confounder of mediator}
 \usage{
 med_smean(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10,
-  mlvl = NULL)
+  mlvl = NULL, quants = c(0.025, 0.5, 0.975))
 }
 \arguments{
 \item{dat}{a dataframe containing the exposure, outcome, mediators, and confounders}
@@ -23,6 +23,8 @@ med_smean(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10,
 \item{boot}{the number of bootstrap samples used to build confidence intervals}
 
 \item{mlvl}{the levels of M to calculate corresponding CDE's to. Default is sample average.}
+
+\item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
 }
 \value{
 An S3 object of class \code{cmed_smean} containing:
@@ -40,6 +42,9 @@ ymod2  the model of Y residuals for the last bootstrap sample
 cde  array story controlled direct effects from bootstrapped results
 }
 \description{
+\code{med_smean}
+}
+\details{
 Returns the controlled direct effect CDE(M) of an exposure A on an outcome Y, not
 operating through a mediator M, in the case of exposure-induced confounding of
 the M->Y association. Follows section 5.3.5 of Vanderweele's book on causal

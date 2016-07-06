@@ -4,8 +4,8 @@
 \alias{med_multi}
 \title{\code{med_multi}}
 \usage{
-med_multi(dat, A, Y, M, C, fam = gaussian(link = "identity"), boot = 10,
-  nmin = 10)
+med_multi(dat, A, Y, M, C = NULL, fam = gaussian(link = "identity"),
+  boot = 10, nmin = 10)
 }
 \arguments{
 \item{dat}{a dataframe containing the exposure, outcome, mediators, and confounders}

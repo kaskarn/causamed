@@ -15,6 +15,7 @@
 #' @param L  the exposure-induced confounders of the association of M with Y
 #' @param boot  the number of bootstrap samples used to build confidence intervals
 #' @param mlvl  the levels of M to calculate corresponding CDE's to. Default is sample average.
+#' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
 #' @return  An S3 object of class \code{cmed_smean} containing:
 #' @return  k2  the coefficient of M in regression of A, M, L and C on Y
 #' @return  k3  the coefficient of A*M from regression of A, M, L and C on Y
@@ -26,45 +27,53 @@
 #' my_list <- med_smean(data, A, Y, M, c1 + c2 + c3 + c2*c3, mlvl = quantiles(M, probs = c(0.25, 0.5, 0.75)))
 #' }
 #' @export
-med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, mlvl = NULL){
+med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, mlvl = NULL, quants = c(0.025, 0.5, 0.975)){
   acol <- deparse(substitute(A)) %>% match(names(dat))
   mcol <- deparse(substitute(M)) %>% match(names(dat))
   ycol <- deparse(substitute(Y)) %>% match(names(dat))
 
   if(is.factor(dat[[acol]])) alen <- nlevels(dat[[acol]]) - 1 else alen <- 1
   if(is.factor(dat[[mcol]])) mlen <- nlevels(dat[[mcol]]) - 1 else mlen <- 1
-
-
+  
+  if(is.null(mlvl)){
+    if(is.factor(dat[[mcol]])) mlvl <- (table(dat[[mcol]]) %>% prop.table)[-1]
+    else mlvl <- mean(dat[[mcol]], na.rm = TRUE)
+  }
   cde <- array(NA, dim = c(boot, alen, length(mlvl)/mlen))
+  pb <- txtProgressBar(style = 3)
   for(i in 1:boot){
-    ymod <- lm(data = dat, substitute(Y ~ A + M + A*M + C + L))
+    bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+    while(is.factor(dat[[acol]]) && min(table(dat[bi,acol])) < nmin){
+      a <- a + 1
+      message("Resampling failed, retrying...")
+      bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      if(a > i/4 + boot/i/16) stop("Excessive resampling failure rate, adjust tolerance (nmin) or recode exposure variable")
+    }
+    ymod <- lm(data = dat[bi,], substitute(Y ~ A + M + A*M + C + L))
     if(i == 1) intpos <- grep(":", names(ymod$coefficients))[1]
     k3 <- ymod$coefficients[intpos:(intpos+alen*mlen-1)]
     k2 <- ymod$coefficients[(alen+2) : (alen+mlen+1)]
 
     if(is.factor(dat[[acol]]) && is.factor(dat[[mcol]])){
       intmat <- cbind(rep(0, alen+1), rbind(0, matrix(k3, alen, mlen)))
-      yp <- dat[[ycol]] - intmat[cbind(dat[[acol]], dat[[mcol]])] - c(0,k2)[as.numeric(dat[[mcol]])]
+      yp <- dat[bi,ycol] - intmat[cbind(dat[bi, acol], dat[bi, mcol])] - c(0,k2)[as.numeric(dat[bi, mcol])]
     }else if(is.factor(dat[[acol]])) {
-      yp <- dat[[ycol]] - dat[[mcol]] * c(0,k3)[as.numeric(dat[[acol]])] - k2*dat[[mcol]]
+      yp <- dat[bi, ycol] - dat[bi, mcol] * c(0,k3)[as.numeric(dat[bi, acol])] - k2*dat[bi, mcol]
     }else if(is.factor(dat[[mcol]])) {
-      yp <- dat[[ycol]] - dat[[acol]] * c(0,k3)[as.numeric(dat[[mcol]])] - c(0,k2)[as.numeric(dat[[mcol]])]
-    }else yp <- dat[[ycol]] - dat[[mcol]]*dat[[acol]]*k3
+      yp <- dat[bi, ycol] - dat[bi, acol] * c(0,k3)[as.numeric(dat[bi, mcol])] - c(0,k2)[as.numeric(dat[bi, mcol])]
+    }else yp <- dat[bi, ycol] - dat[bi, mcol]*dat[bi, acol]*k3
 
     # We lookup yp in parent environment to avoid collision with dataframe
-    ymod2 <- lm(data = oai, substitute(eval(quote(yp), parent.frame()) ~ A + C))
+    ymod2 <- lm(data = dat[bi,], substitute(eval(quote(yp), parent.frame()) ~ A + C))
     g1 <- ymod2$coefficients[1:alen + 1]
 
-    if(is.null(mlvl)){
-      if(is.factor(dat[[mcol]])) mlvl <- (table(dat[[mcol]]) %>% prop.table)[-1]
-      else mlvl <- mean(dat[[mcol]], na.rm = TRUE)
-    }
+
     cde[i,,] <- g1 + t(matrix(k3, alen, mlen) %*% mlvl)
+    setTxtProgressBar(pb, i/boot)
   }
-  out <- list(g1 = g1,
-              k2 = k2, k3 = k3,
-              ymod1 = ymod, ymod2 = ymod2,
-              cde = cde
+  out <- list(raw = list(cde = cde),
+              last = list(g1 = g1, k2 = k2, k3 = k3, ymod1 = ymod, ymod2 = ymod2),
+              cde = apply(cde, 2, quantile, probs = c(quants))
   )
   class(out) <- "cmed.smean"
   return(out)
