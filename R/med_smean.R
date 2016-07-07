@@ -34,7 +34,7 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
 
   if(is.factor(dat[[acol]])) alen <- nlevels(dat[[acol]]) - 1 else alen <- 1
   if(is.factor(dat[[mcol]])) mlen <- nlevels(dat[[mcol]]) - 1 else mlen <- 1
-  
+
   if(is.null(mlvl)){
     if(is.factor(dat[[mcol]])) mlvl <- (table(dat[[mcol]]) %>% prop.table)[-1]
     else mlvl <- mean(dat[[mcol]], na.rm = TRUE)
@@ -73,7 +73,7 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
   }
   out <- list(raw = list(cde = cde),
               last = list(g1 = g1, k2 = k2, k3 = k3, ymod1 = ymod, ymod2 = ymod2),
-              cde = apply(cde, 2, quantile, probs = c(quants))
+              cde = apply(cde, 2, quantile, probs = c(quants), na.rm = TRUE)
   )
   class(out) <- "cmed.smean"
   return(out)

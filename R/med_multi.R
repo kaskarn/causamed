@@ -49,7 +49,7 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
 
     # Get weights like VdW (strangely?) explains and calculate expectations at levels of A
     w <- fmatch(((1/pac) %*% diag(pa)), dat[bi,acol])
-    q2[i,] <- sapply(levels(dat[bi,][[acol]]), function (i) weighted.mean(x = dat[bi,ycol][dat[bi,acol] == i], w = w[dat[bi,acol] == i], na.rm = TRUE))
+    q2[i,] <- sapply(levels(dat[[acol]]), function (i) weighted.mean(x = dat[bi,ycol][dat[bi,acol] == i], w = w[dat[bi,acol] == i], na.rm = TRUE))
 
     # Calculate Y_aMa* for all a in support of A, from model of Y
     xset <- function (i) predict(object = ymod, newdata = mutate_(dat[bi,], .dots = setNames(list(~i), names(dat)[acol])))
