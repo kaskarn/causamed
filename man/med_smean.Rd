@@ -5,7 +5,7 @@
 \title{Structural means model to compute controlled direct effects given an exposue-induced confounder of mediator}
 \usage{
 med_smean(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10,
-  mlvl = NULL, quants = c(0.025, 0.5, 0.975))
+  mlvl = NULL, quants = c(0.025, 0.5, 0.975), mids = NULL, maxit = 5)
 }
 \arguments{
 \item{dat}{a dataframe containing the exposure, outcome, mediators, and confounders}
@@ -22,9 +22,13 @@ med_smean(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10,
 
 \item{boot}{the number of bootstrap samples used to build confidence intervals}
 
+\item{nmin}{number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met}
+
 \item{mlvl}{the levels of M to calculate corresponding CDE's to. Default is sample average.}
 
 \item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
+
+\item{mids}{an optional mids object to serve as template for imputations}
 }
 \value{
 An S3 object of class \code{cmed_smean} containing:

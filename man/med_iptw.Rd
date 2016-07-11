@@ -5,7 +5,8 @@
 \title{Marginal structural models to compute controlled direct effects given an exposue-induced confounder of mediator}
 \usage{
 med_iptw(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian",
-  boot = 10, quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit)
+  boot = 10, nmin = 10, quants = c(0.025, 0.5, 0.975), mlvl = NULL,
+  link = logit, mids = NULL, maxit = 5)
 }
 \arguments{
 \item{dat}{The original dataset}
@@ -22,10 +23,14 @@ med_iptw(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian",
 
 \item{boot}{specifies the number of bootstrap samples drawn to make the confidence intervals}
 
+\item{nmin}{number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met}
+
 \item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
 
 \item{mlvl}{a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
 the observed sample distributions}
+
+\item{mids}{an optional mids object to serve as template for imputations}
 }
 \value{
 An S3 object of class \code{cmed.ipw} containing:

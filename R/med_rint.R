@@ -16,7 +16,9 @@
 #' @param mlvl a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
 #' the observed sample distributions
 #' @param boot specifies the number of bootstrap samples drawn to make the confidence intervals. Default is 10 for testing purposes
+#' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
 #' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
+#' @param mids an optional mids object to serve as template for imputations
 #' @return An S3 object of class \code{cmed.ipw} containing:
 #' @return nde mean and 95p confidence intervals for NDEr
 #' @return nie mean and 95p confidence intervals for NIEr
@@ -28,7 +30,8 @@
 #' my_list <- med_rint(dat = mydat,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, L = my_problem, boot = 1000)
 #' }
 #' @export
-med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), nmin = 20){
+med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10, quants = c(0.025, 0.5, 0.975), nmin = 20,
+                     mids = NULL, maxit = 5){
 
   acol <- deparse(substitute(A)) %>% match(names(dat))
   ycol <- deparse(substitute(Y)) %>% match(names(dat))
@@ -42,12 +45,18 @@ med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 1
 
   nde <- nie <- te <- ter <- niewrong <- matrix(NA, nrow = boot, ncol = alen)
   pb <- txtProgressBar(style = 3)
+  if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-    #resample
-    if(i == boot){ bi <- 1:nrow(dat)
+     if(!is.null(mids)) {
+      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+    }
+    if (i == boot){ bi <- 1:nrow(dat)
     }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      while(min(table(dat[bi,acol])) < nmin) bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+        message("Resampling failed... retrying")
+        bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      }
     }
 
     #create models from observed data

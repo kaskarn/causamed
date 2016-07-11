@@ -5,7 +5,7 @@
 \title{Random interventional analogue effects}
 \usage{
 med_rint(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10,
-  quants = c(0.025, 0.5, 0.975), nmin = 20)
+  quants = c(0.025, 0.5, 0.975), nmin = 20, mids = NULL, maxit = 5)
 }
 \arguments{
 \item{dat}{The original dataset}
@@ -23,6 +23,10 @@ med_rint(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 10,
 \item{boot}{specifies the number of bootstrap samples drawn to make the confidence intervals. Default is 10 for testing purposes}
 
 \item{quants}{an optional vector of quantiles for the confidence interval (95 percent by default)}
+
+\item{nmin}{number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met}
+
+\item{mids}{an optional mids object to serve as template for imputations}
 
 \item{mlvl}{a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
 the observed sample distributions}

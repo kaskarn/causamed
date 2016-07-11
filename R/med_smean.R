@@ -14,8 +14,10 @@
 #' @param M  the mediators of interest
 #' @param L  the exposure-induced confounders of the association of M with Y
 #' @param boot  the number of bootstrap samples used to build confidence intervals
+#' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
 #' @param mlvl  the levels of M to calculate corresponding CDE's to. Default is sample average.
 #' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
+#' @param mids an optional mids object to serve as template for imputations
 #' @return  An S3 object of class \code{cmed_smean} containing:
 #' @return  k2  the coefficient of M in regression of A, M, L and C on Y
 #' @return  k3  the coefficient of A*M from regression of A, M, L and C on Y
@@ -27,7 +29,8 @@
 #' my_list <- med_smean(data, A, Y, M, c1 + c2 + c3 + c2*c3, mlvl = quantiles(M, probs = c(0.25, 0.5, 0.75)))
 #' }
 #' @export
-med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, mlvl = NULL, quants = c(0.025, 0.5, 0.975)){
+med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, mlvl = NULL, quants = c(0.025, 0.5, 0.975),
+                      mids = NULL, maxit = 5){
   acol <- deparse(substitute(A)) %>% match(names(dat))
   mcol <- deparse(substitute(M)) %>% match(names(dat))
   ycol <- deparse(substitute(Y)) %>% match(names(dat))
@@ -41,13 +44,18 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
   }
   cde <- array(NA, dim = c(boot, alen, length(mlvl)/mlen))
   pb <- txtProgressBar(style = 3)
+  if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-    bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-    while(is.factor(dat[[acol]]) && min(table(dat[bi,acol])) < nmin){
-      a <- a + 1
-      message("Resampling failed, retrying...")
+     if(!is.null(mids)) {
+      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+    }
+    if (i == boot){ bi <- 1:nrow(dat)
+    }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      if(a > i/4 + boot/i/16) stop("Excessive resampling failure rate, adjust tolerance (nmin) or recode exposure variable")
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+        message("Resampling failed... retrying")
+        bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      }
     }
     ymod <- lm(data = dat[bi,], substitute(Y ~ A + M + A*M + C + L))
     if(i == 1) intpos <- grep(":", names(ymod$coefficients))[1]

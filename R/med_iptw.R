@@ -12,7 +12,9 @@
 #' @param mlvl a matrix or table of probability-mass functions for the mediator, to calculate CDE(M). By default, mlvl is set to
 #' the observed sample distributions
 #' @param boot specifies the number of bootstrap samples drawn to make the confidence intervals
+#' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
 #' @param quants an optional vector of quantiles for the confidence interval (95 percent by default)
+#' @param mids an optional mids object to serve as template for imputations
 #' @return An S3 object of class \code{cmed.ipw} containing:
 #' @return w  the ipw used in the marginal strucutral model
 #' @return cde.int  an array where cde.int[i,,] indexes a matrix corresponding to the CDE calculated for a PMF of M given in mlvl,
@@ -25,8 +27,8 @@
 #' my_list <- med_iptw(dat = df,  A = my_exposure, Y = my_outcome, M = my_mediator, C = a_confounder + another_confounder, boot = 1000)
 #' }
 #' @export
-med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boot = 10,
-                     quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit){
+med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boot = 10, nmin = 10,
+                     quants = c(0.025, 0.5, 0.975), mlvl = NULL, link = logit, mids = NULL, maxit = 5){
 
   acol <- deparse(substitute(A)) %>% match(names(dat))
   ycol <- deparse(substitute(Y)) %>% match(names(dat))
@@ -43,9 +45,19 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
   pbar <- txtProgressBar(style = 3)
   cde.int <- array(NA, dim = c(boot, alen, ilvl))
   cde.noint <- te <- matrix(NA, nrow = boot, ncol = alen)
+  if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
+    if(!is.null(mids)) {
+      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+    }
     if (i == boot){ bi <- 1:nrow(dat)
-    }else bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+    }else{
+      bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < nmin){
+        message("Resampling failed... retrying")
+        bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      }
+    }
 
     anum <- (table(dat[bi,acol]) %>% prop.table)[as.numeric(dat[bi, acol])]
     aden.mod <- multinom(data = dat[bi,], substitute(A ~ C), trace = FALSE)
@@ -75,6 +87,8 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
   out <- list(
     w = dat$w,
     ymod = ymod, ymod2 = ymod2,
+    amod = aden.mod,
+    mmod = mden.mod,
     g1 = g1, g3 = g3,
     cde.int = cde.int,
     cde.noint = cde.noint,

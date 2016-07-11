@@ -5,7 +5,7 @@
 \title{\code{med_multi}}
 \usage{
 med_multi(dat, A, Y, M, C = NULL, fam = gaussian(link = "identity"),
-  boot = 10, nmin = 10)
+  boot = 10, nmin = 10, mids = NULL, maxit = 5)
 }
 \arguments{
 \item{dat}{a dataframe containing the exposure, outcome, mediators, and confounders}
@@ -23,6 +23,8 @@ med_multi(dat, A, Y, M, C = NULL, fam = gaussian(link = "identity"),
 \item{boot}{number of bootstrap samples used to build the 95p confidence intervals}
 
 \item{nmin}{number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met}
+
+\item{mids}{an optional mids object to serve as template for imputations}
 }
 \description{
 Decomposes the effect of an exposure on an outcome into a direct effect operating through a set of intermediary

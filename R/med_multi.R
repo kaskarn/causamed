@@ -12,6 +12,7 @@
 #' @param fam  specifies GLM link function and distribution of residuals. Default is gaussian(link = identity)
 #' @param boot  number of bootstrap samples used to build the 95p confidence intervals
 #' @param nmin  number of participants all categories of exposure must have; samples will be redrawn if this criterion is not met
+#' @param mids an optional mids object to serve as template for imputations
 #' @examples \donttest{my_list <- med_multi(dat = df,
 #'  X = my_exposure,
 #'  M = mediator_1 + mediator_2 + ... + mediator_1*mediator_2 + mediator_1*exposure,
@@ -19,7 +20,7 @@
 #'  C = a_confounder + another_confounder * anything,
 #'  fam = gaussian(link = "identity"), boot = 1000)}
 #' @export
-med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), boot = 10, nmin = 10){
+med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), boot = 10, nmin = 10, mids = NULL, maxit = 5){
   # Setup
   acol <- deparse(substitute(A)) %>% match(names(dat)) #for speedy addressing
   ycol <- deparse(substitute(Y)) %>% match(names(dat)) #moar speed
@@ -29,14 +30,18 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
   q2 <- q3  <- array(NA, dim = c(boot, nlevels(dat[[acol]])))
   pb <- txtProgressBar(style = 3); a <- 0
   # Run bootsrapped procedure
+  if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-    # Resample
-    bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-    while(is.factor(dat[[acol]]) && min(table(dat[bi,acol])) < nmin){
-      a <- a + 1
-      message("Resampling failed, retrying...")
+     if(!is.null(mids)) {
+      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+    }
+    if (i == boot){ bi <- 1:nrow(dat)
+    }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      if(a > i/4 + boot/i/16) stop("Excessive resampling failure rate, adjust tolerance (nmin) or recode exposure variable")
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+        message("Resampling failed... retrying")
+        bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
+      }
     }
 
     # Run exposure and outcome models
