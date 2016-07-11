@@ -32,16 +32,17 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
   # Run bootsrapped procedure
   if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-     if(!is.null(mids)) {
-      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
-    }
     if (i == boot){ bi <- 1:nrow(dat)
     }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < nmin){
         message("Resampling failed... retrying")
         bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
       }
+    }
+    if(!is.null(mids)) {
+      dat <- mice(dat[bi,], m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+      for(j in names(dat)) attr(dat[[j]], "contrasts") <- NULL
     }
 
     # Run exposure and outcome models
@@ -60,6 +61,8 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
     xset <- function (i) predict(object = ymod, newdata = mutate_(dat[bi,], .dots = setNames(list(~i), names(dat)[acol])))
     ypred <- sapply( levels(dat[[acol]]), function(i) xset(i) )[dat[bi,acol] == ref,]
     q3[i,] <- apply(ypred, 2, weighted.mean, w = w[dat[bi,acol] == ref], na.rm = TRUE)
+
+    if(!is.null(mids)) dat <- dat2
     setTxtProgressBar(pb, i/boot)
   }
   if(ymod$family[2] == "identity"){ ### additive scale outcomes

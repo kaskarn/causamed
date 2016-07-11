@@ -47,9 +47,6 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
   cde.noint <- te <- matrix(NA, nrow = boot, ncol = alen)
   if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-    if(!is.null(mids)) {
-      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
-    }
     if (i == boot){ bi <- 1:nrow(dat)
     }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
@@ -57,6 +54,10 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
         message("Resampling failed... retrying")
         bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
       }
+    }
+    if(!is.null(mids)) {
+      dat <- mice(dat[bi,], m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+      for(j in names(dat)) attr(dat[[j]], "contrasts") <- NULL
     }
 
     anum <- (table(dat[bi,acol]) %>% prop.table)[as.numeric(dat[bi, acol])]
@@ -82,6 +83,7 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
     tmod <- glm(data = dat[bi,], substitute(Y ~ A), weights = wa)
     te[i,] <- tmod$coefficients[1:alen + 1]
 
+    if(!is.null(mids)) dat <- dat2
     setTxtProgressBar(pbar, i/boot)
   }
   out <- list(
@@ -92,7 +94,8 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
     g1 = g1, g3 = g3,
     cde.int = cde.int,
     cde.noint = cde.noint,
-    te = te
+    te = te,
+    dat = dat
   )
   class(out) <- "cmed.ipw"
   return(out)

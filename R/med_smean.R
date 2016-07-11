@@ -46,16 +46,17 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
   pb <- txtProgressBar(style = 3)
   if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-     if(!is.null(mids)) {
-      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
-    }
     if (i == boot){ bi <- 1:nrow(dat)
     }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < nmin){
         message("Resampling failed... retrying")
         bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
       }
+    }
+    if(!is.null(mids)) {
+      dat <- mice(dat[bi,], m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+      for(j in names(dat)) attr(dat[[j]], "contrasts") <- NULL
     }
     ymod <- lm(data = dat[bi,], substitute(Y ~ A + M + A*M + C + L))
     if(i == 1) intpos <- grep(":", names(ymod$coefficients))[1]
@@ -75,8 +76,9 @@ med_smean <- function(dat, A, Y, M, C = NULL, L = NULL, boot = 10, nmin = 10, ml
     ymod2 <- lm(data = dat[bi,], substitute(eval(quote(yp), parent.frame()) ~ A + C))
     g1 <- ymod2$coefficients[1:alen + 1]
 
-
     cde[i,,] <- g1 + t(matrix(k3, alen, mlen) %*% mlvl)
+
+    if(!is.null(mids)) dat <- dat2
     setTxtProgressBar(pb, i/boot)
   }
   out <- list(raw = list(cde = cde),

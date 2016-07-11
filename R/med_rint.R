@@ -46,17 +46,19 @@ med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 1
   nde <- nie <- te <- ter <- niewrong <- matrix(NA, nrow = boot, ncol = alen)
   pb <- txtProgressBar(style = 3)
   if(!is.null(mids)) dat2 <- dat
+  if(!is.null(mids)) dat2 <- dat
   for(i in 1:boot){
-     if(!is.null(mids)) {
-      dat <- mice(dat2, m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
-    }
     if (i == boot){ bi <- 1:nrow(dat)
     }else{
       bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
-      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < 10){
+      while(is.factor(dat[acol]) & min(table(dat[bi,acol])) < nmin){
         message("Resampling failed... retrying")
         bi <- sample(1:nrow(dat), nrow(dat), replace = TRUE)
       }
+    }
+    if(!is.null(mids)) {
+      dat <- mice(dat[bi,], m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
+      for(j in names(dat)) attr(dat[[j]], "contrasts") <- NULL
     }
 
     #create models from observed data
@@ -98,6 +100,7 @@ med_rint <- function(dat, A, M, Y, C = NULL, L = NULL, astar = "astar", boot = 1
     te[i,] <- lm(data = ddat[ddat$astar == ref,], substitute(Y ~ A), weights = w_a)$coefficients[-1]
     ter[i,] <- lm(data = ddat[ddat$astar == ddat[[acol]],], as.formula(paste0(deparse(substitute(Y)), "~ astar")), weights = w_rint)$coefficients[-1]
 
+    if(!is.null(mids)) dat <- dat2
     setTxtProgressBar(pb, i/boot)
   }
 
