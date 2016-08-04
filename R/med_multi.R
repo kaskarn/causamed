@@ -21,9 +21,19 @@
 #'  fam = gaussian(link = "identity"), boot = 1000)}
 #' @export
 med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), boot = 10, nmin = 10, mids = NULL, maxit = 5){
+
   # Setup
-  acol <- deparse(substitute(A)) %>% match(names(dat)) #for speedy addressing
-  ycol <- deparse(substitute(Y)) %>% match(names(dat)) #moar speed
+  if(deparse(substitute(A)) %in% names(dat)) anam <- deparse(substitute(A)) else anam <- A
+  if(deparse(substitute(Y)) %in% names(dat)) ynam <- deparse(substitute(Y)) else ynam <- Y
+  acol <- match(anam, names(dat))
+  ycol <- match(ynam, names(dat))
+
+  if(!deparse(substitute(M)) %in% names(dat)) M <- deparse(substitute(M))
+  if(!deparse(substitute(C)) %in% names(dat)) C <- deparse(substitute(C))
+
+  aform <- as.formula(paste0(anam, "~", C))
+  yform <- as.formula(paste0(ynam, "~", anam, "+", M, "+", C))
+
   ref <- levels(dat[[acol]])[1]
 
   # Initialize arrays and progress bar before bootstrap
@@ -46,8 +56,8 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
     }
 
     # Run exposure and outcome models
-    amod <- multinom(data = dat[bi,], substitute(A ~ C), trace = FALSE)
-    ymod <- glm(data = dat[bi,], substitute(Y ~ A + M + C), family = fam)
+    amod <- multinom(data = dat[bi,], aform, trace = FALSE)
+    ymod <- glm(data = dat[bi,], yform, family = fam)
 
     # Get marginal and conditional probabilities of A
     pa <- (table(dat[bi,][[acol]]) %>% prop.table)
@@ -72,8 +82,9 @@ med_multi <- function(dat, A, Y, M, C = NULL, fam = gaussian(link="identity"), b
   }else{ ### log scales
     nde <- q3 / replicate(nlevels(dat[[acol]]), q2[,1])
     nie <- q2 / q3
-    pm <- NULL #hmm
+    pm <- exp(log(q3)/log(q2))
   }
+  names(nde) <- names(nie) <- names(pm) <- names(q2) <- names(q3) <- levels(dat[[acol]])
   out <- list(raw = list(q2 = q2, q3 = q3, nde = nde, nie = nie, pm = pm, ypred = ypred),
               nie = apply(nie, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE),
               nde = apply(nde, 2, quantile, probs = c(0.025, 0.5, 0.975), na.rm = TRUE),

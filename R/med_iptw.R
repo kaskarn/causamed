@@ -57,9 +57,8 @@ med_iptw <- function(dat, A, M, Y, C = NULL, L = NULL, regtype = "gaussian", boo
     }
     if(!is.null(mids)) {
       dat <- mice(dat[bi,], m = 1, maxit = maxit, pred = mids$predictorMatrix, method = mids$method, print = FALSE) %>% complete
-      for(j in names(dat)) attr(dat[[j]], "contrasts") <- NULL
     }
-
+    
     anum <- (table(dat[bi,acol]) %>% prop.table)[as.numeric(dat[bi, acol])]
     aden.mod <- multinom(data = dat[bi,], substitute(A ~ C), trace = FALSE)
     aden <- predict(aden.mod, newdata = dat[bi,], type = "probs") %>% fmatch(dat[bi, acol])
